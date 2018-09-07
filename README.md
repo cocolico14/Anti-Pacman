@@ -2,7 +2,7 @@
 
 > Implementation of Anti-Pacman game with simple AI in java
 
-<img src="./assets/Overview.png" width="350" align="middle">
+<img src="./assets/Overview.png" width="550" align="middle">
 
 <hr />
 
@@ -31,11 +31,11 @@
 
 Pacman now can eat ghosts!
 
-<img src="./assets/Hollow_Mode.png" width="350" align="middle">
+<img src="./assets/Hollow_Mode.png" width="550" align="middle">
 
 ### Pacman is captured ###
 
-<img src="./assets/Winning.png" width="350" align="middle">
+<img src="./assets/Winning.png" width="550" align="middle">
 
 <hr />
 
