@@ -389,7 +389,6 @@ public class Pacman {
             default:
                 break;
         }
-        System.out.println(dis[0][0] + " ; " + map.isWall(this.locX, this.locY+1));
         if(MovePacman == Movement.NONE){
             dotFinder();
         }
