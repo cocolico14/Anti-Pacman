@@ -2,6 +2,13 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/Users/soheilchangizi/Downloads/AntiPacmanFinal/src/antipacmanfinal/Game.java</file>
+            <file>file:/Users/soheilchangizi/Downloads/AntiPacmanFinal/src/antipacmanfinal/Map.java</file>
+            <file>file:/Users/soheilchangizi/Downloads/AntiPacmanFinal/src/antipacmanfinal/AntiPacmanFinal.java</file>
+            <file>file:/Users/soheilchangizi/Downloads/AntiPacmanFinal/src/antipacmanfinal/Ghosts.java</file>
+            <file>file:/Users/soheilchangizi/Downloads/AntiPacmanFinal/src/antipacmanfinal/Pacman.java</file>
+            <file>file:/Users/soheilchangizi/Downloads/AntiPacmanFinal/src/antipacmanfinal/Dots.java</file>
+        </group>
     </open-files>
 </project-private>

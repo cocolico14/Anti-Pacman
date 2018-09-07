@@ -23,33 +23,38 @@ import javafx.scene.shape.Circle;
 public class Ghosts {
     
     private int locX, locY;
+    private Map map;
+    private Pathfinder pathFinder;
     private int checkV = 1;
     
-    private Circle ghost;
     private Image image;
     private ImageView iv;
     private Color color;
     private static DropShadow glow;
     
-    private Pathfinder.Movement mGhost = Pathfinder.Movement.NONE;
-    private Pathfinder.Movement randomMoveGhost = Pathfinder.Movement.NONE;
+    private Movement mGhost = Movement.NONE;
+    private Movement randomMoveGhost = Movement.NONE;
+    private Movement prevMove = Movement.NONE;
     
-    public Ghosts(int x, int y, Group root, Color c) throws FileNotFoundException {
-        locX = x;
-        locY = y;
-        color = c;
-        ghost = new Circle((locX * Map.getBLOCK_SIZE()) + (Map.getBLOCK_SIZE()/2), (locY * Map.getBLOCK_SIZE()) + (Map.getBLOCK_SIZE()/2), (Map.getBLOCK_SIZE()/2));
+    public Ghosts(int x, int y, Group root, Color c, Game game) throws FileNotFoundException {
+        this.locX = x;
+        this.locY = y;
+        this.map = game.getMap();
+        this.pathFinder = game.getPathFinder();
+        this.color = c;
+        
         if (c == Color.CYAN) image = new Image(new FileInputStream(System.getProperty("user.dir")+"/src/antipacmanfinal/images/cyan.png"));
         else if (c == Color.RED) image = new Image(new FileInputStream(System.getProperty("user.dir")+"/src/antipacmanfinal/images/red.png"));
         else if (c == Color.ORANGE) image = new Image(new FileInputStream(System.getProperty("user.dir")+"/src/antipacmanfinal/images/orange.png"));
         else image = new Image(new FileInputStream(System.getProperty("user.dir")+"/src/antipacmanfinal/images/pink.png"));
         iv = new ImageView(image);
-        iv.setX((locX * Map.getBLOCK_SIZE()) + (Map.getBLOCK_SIZE()/5));
-        iv.setY((locY * Map.getBLOCK_SIZE()) + (Map.getBLOCK_SIZE()/5));
-        glow = new DropShadow(Map.getBLOCK_SIZE(), locX-10, locY-5, Color.AZURE);
+        iv.setX((locX * map.getBLOCK_SIZE()) + (map.getBLOCK_SIZE()/5));
+        iv.setY((locY * map.getBLOCK_SIZE()) + (map.getBLOCK_SIZE()/5));
+        iv.setFitHeight(map.getBLOCK_SIZE()/1.5);
+        iv.setFitWidth(map.getBLOCK_SIZE()/1.5);
+        iv.setPreserveRatio(true);
+        glow = new DropShadow(map.getBLOCK_SIZE(), locX-10, locY-5, Color.AZURE);
         glow.setSpread(.6);
-        ghost.setFill(c);
-        //root.getChildren().add(ghost);
         root.getChildren().add(iv);
     }
     
@@ -57,57 +62,36 @@ public class Ghosts {
         return iv;
     }
     
-    
     public int getLocX() {
         return locX;
-    }
-    
-    public void setLocX(int locX) {
-        this.locX = locX;
     }
     
     public int getLocY() {
         return locY;
     }
     
-    public void setLocY(int locY) {
-        this.locY = locY;
-    }
-    
     public Color getColor() {
         return color;
-    }
-    
-    public void setColor(Color color) {
-        this.color = color;
-    }
-    
-    public Circle getGhost() {
-        return ghost;
-    }
-    
-    public void setGhost(Circle ghost) {
-        this.ghost = ghost;
     }
     
     public static DropShadow getGlow() {
         return glow;
     }
     
-    public Pathfinder.Movement getmGhost() {
+    public Movement getmGhost() {
         return mGhost;
     }
     
-    public Pathfinder.Movement getRandomMoveGhost() {
+    public Movement getRandomMoveGhost() {
         return randomMoveGhost;
     }
     
-    public void setmGhost(Pathfinder.Movement mGhost) {
-        this.mGhost = mGhost;
+    public Movement getPreMove() {
+        return prevMove;
     }
     
-    public void setRandomMoveGhost(Pathfinder.Movement randomMoveGhost) {
-        this.randomMoveGhost = randomMoveGhost;
+    public void setmGhost(Movement mGhost) {
+        this.mGhost = mGhost;
     }
     
     public int getCheckV() {
@@ -115,7 +99,6 @@ public class Ghosts {
     }
     
     public void setUnvisible(){
-        this.ghost.setVisible(false);
         this.iv.setVisible(false);
         this.checkV = 0;
     }
@@ -127,16 +110,13 @@ public class Ghosts {
      * @param m This is the Movement parameter for giving a direction
      * @return boolean
      */
-    public boolean checkColGhost(Pathfinder.Movement m) {
-        if(this.checkV == 0){
-            return true;
-        }
-        if(this.locX < 0  && m.dx == -1){
+    public boolean checkColGhost(Movement m) {
+        if(this.locX <= 0  && m.dx == -1){
             return false;
-        }else if(this.locX > Map.getGRID_LENGTH()-1 && m.dx == 1){
+        }else if(this.locX >= map.getGRID_LENGTH()-1 && m.dx == 1){
             return false;
         }
-        if(!Map.isWall(this.getLocX() + m.dx, this.getLocY() + m.dy)) {
+        if(!map.isWall(this.getLocX() + m.dx, this.getLocY() + m.dy)) {
             return false;
         }
         return true;
@@ -147,26 +127,22 @@ public class Ghosts {
      *
      * @param m This is the Movement parameter for giving a direction
      */
-    public void moveGhost(Pathfinder.Movement m) {
+    public void moveGhost(Movement m) {
         if(this.checkV == 0){
             return;
         }
-        if (this.getLocX() == 0 && m == Pathfinder.Movement.LEFT) {
-            ghost.setTranslateX(ghost.getTranslateX() + (Map.getGRID_LENGTH()) * Map.getBLOCK_SIZE());
-            iv.setTranslateX(ghost.getTranslateX() + (Map.getGRID_LENGTH()) * Map.getBLOCK_SIZE());
-            this.setLocX(Map.getGRID_LENGTH());
-        } else if (this.getLocX() == Map.getGRID_LENGTH() - 1 && m == Pathfinder.Movement.RIGHT) {
-            ghost.setTranslateX(ghost.getTranslateX() - (Map.getGRID_LENGTH()) * Map.getBLOCK_SIZE());
-            iv.setTranslateX(ghost.getTranslateX() - (Map.getGRID_LENGTH()) * Map.getBLOCK_SIZE());
-            this.setLocX(-1);
+        if (this.getLocX() == 0 && m == Movement.LEFT) {
+            iv.setTranslateX(iv.getTranslateX() + (map.getGRID_LENGTH()) * map.getBLOCK_SIZE());
+            this.locX = map.getGRID_LENGTH();
+        } else if (this.getLocX() == map.getGRID_LENGTH() - 1 && m == Movement.RIGHT) {
+            iv.setTranslateX(iv.getTranslateX() - (map.getGRID_LENGTH()) * map.getBLOCK_SIZE());
+            this.locX = -1;
         }
         if (!checkColGhost(m)) {
-            ghost.setTranslateY(ghost.getTranslateY() + (m.dy) * 40);
-            iv.setTranslateY(ghost.getTranslateY() + (m.dy) * (0.01));
-            this.setLocY(this.getLocY() + m.dy);
-            ghost.setTranslateX(ghost.getTranslateX() + (m.dx) * 40);
-            iv.setTranslateX(ghost.getTranslateX() + (m.dx) * (0.01));
-            this.setLocX(this.getLocX() + m.dx);
+            iv.setTranslateY(iv.getTranslateY() + (m.dy) * (map.getBLOCK_SIZE()));
+            this.locY = this.getLocY() + m.dy;
+            iv.setTranslateX(iv.getTranslateX() + (m.dx) * (map.getBLOCK_SIZE()));
+            this.locX = this.getLocX() + m.dx;
         }
     }
     
@@ -179,16 +155,25 @@ public class Ghosts {
             return;
         }
         int generator = 0;
-        ArrayList<Pathfinder.Movement> moves = new ArrayList<>();
-        moves.add(Pathfinder.Movement.DOWN);
-        moves.add(Pathfinder.Movement.UP);
-        moves.add(Pathfinder.Movement.LEFT);
-        moves.add(Pathfinder.Movement.RIGHT);
-        randomMoveGhost = Pathfinder.Movement.NONE;
-        while (randomMoveGhost == Pathfinder.Movement.NONE) {
+        ArrayList<Movement> moves = new ArrayList<>();
+        moves.add(Movement.DOWN);
+        moves.add(Movement.UP);
+        moves.add(Movement.LEFT);
+        moves.add(Movement.RIGHT);
+        prevMove = randomMoveGhost;
+        randomMoveGhost = Movement.NONE;
+        while (randomMoveGhost == Movement.NONE) {
             Collections.shuffle(moves);
-            if (!checkColGhost(moves.get(0))) {
-                randomMoveGhost = moves.get(0);
+            if(pathFinder.checkNEWS(this.locX, this.locY) == Status._2WAY_V
+                    || (pathFinder.checkNEWS(this.locX, this.locY) == Status._2WAY_H)){
+                randomMoveGhost = prevMove;
+            }else{
+                for (int i = 0; i < moves.size(); i++) {
+                    if (prevMove != moves.get(i)
+                            && !checkColGhost(moves.get(i))) {
+                        randomMoveGhost = moves.get(i);
+                    }
+                }
             }
         }
     }
@@ -198,7 +183,6 @@ public class Ghosts {
      *
      */
     public void HollowMode() throws FileNotFoundException{
-        this.ghost.setFill(Color.LIGHTGRAY);
         this.iv.setImage(new Image(new FileInputStream(System.getProperty("user.dir")+"/src/antipacmanfinal/images/hollow.png")));
     }
     
@@ -207,7 +191,6 @@ public class Ghosts {
      *
      */
     public void resetColor() throws FileNotFoundException{
-        this.ghost.setFill(color);
         if (color == Color.CYAN) this.iv.setImage(new Image(new FileInputStream(System.getProperty("user.dir")+"/src/antipacmanfinal/images/cyan.png")));
         else if (color == Color.RED) this.iv.setImage(new Image(new FileInputStream(System.getProperty("user.dir")+"/src/antipacmanfinal/images/red.png")));
         else if (color == Color.ORANGE) this.iv.setImage(new Image(new FileInputStream(System.getProperty("user.dir")+"/src/antipacmanfinal/images/orange.png")));

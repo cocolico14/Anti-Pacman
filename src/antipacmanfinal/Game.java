@@ -5,7 +5,6 @@
 */
 package antipacmanfinal;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 import java.util.logging.Level;
@@ -31,17 +30,19 @@ import javafx.util.Pair;
 public class Game {
     
     private AnimationTimer timer;
-    private Pacman pacman;
+    
     private final int dot = 210;
     private boolean isHollow = false;
     private long time = 0;
     private int ghostC = 4;
-    public static boolean won = false;
+    private boolean won = false;
+    private Pathfinder pathFinder;
     
-    public static Ghosts[] ghosts = new Ghosts[4];
-    public static GhostFoc[] gfVal = GhostFoc.values();
-    public static Dots dots;
-    public static Map map;
+    private Pacman pacman;
+    private Ghosts[] ghosts = new Ghosts[4];
+    private GhostFoc[] gfVal = GhostFoc.values();
+    private Dots dots;
+    private Map map;
     
     /**
      * This enum is for show which ghost is focused
@@ -63,7 +64,13 @@ public class Game {
      * @return Scene This returns scene to start method.
      */
     public Scene launchGame(Group root) throws FileNotFoundException {
-        Scene scene = new Scene(root, Map.getGRID_LENGTH() * Map.getBLOCK_SIZE(), Map.getGRID_HEIGHT() * Map.getBLOCK_SIZE(), Color.BLACK);
+        
+        map = new Map();
+        pathFinder = new Pathfinder(map);
+        dots = new Dots(this);
+        
+        
+        Scene scene = new Scene(root, map.getGRID_LENGTH() * map.getBLOCK_SIZE(), map.getGRID_HEIGHT() * map.getBLOCK_SIZE(), Color.BLACK);
         startUp(root);
         
         inputKey(scene, root);
@@ -94,18 +101,16 @@ public class Game {
      * @param root This is the Group parameter for setting nodes on
      */
     private void startUp(Group root) throws FileNotFoundException {
-        dots = new Dots();
-        map = new Map();
         
-        for (int i = 0; i < Map.getGRID_HEIGHT(); i++) {
-            for (int j = 0; j < Map.getGRID_LENGTH(); j++) {
+        for (int i = 0; i < map.getGRID_HEIGHT(); i++) {
+            for (int j = 0; j < map.getGRID_LENGTH(); j++) {
                 if (null != map.getBoard().get(new Pair(i, j))) switch (map.getBoard().get(new Pair(i, j))) {
                     case '#':
                         Rectangle block = new Rectangle();
-                        block.setX(j * Map.getBLOCK_SIZE());
-                        block.setY(i * Map.getBLOCK_SIZE());
-                        block.setWidth(Map.getBLOCK_SIZE());
-                        block.setHeight(Map.getBLOCK_SIZE());
+                        block.setX(j * map.getBLOCK_SIZE());
+                        block.setY(i * map.getBLOCK_SIZE());
+                        block.setWidth(map.getBLOCK_SIZE());
+                        block.setHeight(map.getBLOCK_SIZE());
                         block.setFill(Color.BLUE);
                         block.setArcHeight(10);
                         block.setOpacity(0.6);
@@ -115,7 +120,7 @@ public class Game {
                         root.getChildren().add(block);
                         break;
                     case '+':
-                        Line gate = new Line((j * Map.getBLOCK_SIZE()), (i * Map.getBLOCK_SIZE()), ((j + 1) * Map.getBLOCK_SIZE()), (i * Map.getBLOCK_SIZE()));
+                        Line gate = new Line((j * map.getBLOCK_SIZE()), (i * map.getBLOCK_SIZE()), ((j + 1) * map.getBLOCK_SIZE()), (i * map.getBLOCK_SIZE()));
                         gate.setFill(Color.GOLD);
                         gate.setStroke(Color.DARKMAGENTA);
                         gate.setStrokeWidth(5);
@@ -133,11 +138,11 @@ public class Game {
             }
         }
         
-        pacman = new Pacman(12, 15, root, Color.YELLOW);
-        ghosts[0] = new Ghosts(10, 9, root, Color.RED);
-        ghosts[1] = new Ghosts(11, 9, root, Color.PINK);
-        ghosts[2] = new Ghosts(13, 9, root, Color.CYAN);
-        ghosts[3] = new Ghosts(14, 9, root, Color.ORANGE);
+        pacman = new Pacman(12, 15, root, this);
+        ghosts[0] = new Ghosts(10, 9, root, Color.RED, this);
+        ghosts[1] = new Ghosts(11, 9, root, Color.PINK, this);
+        ghosts[2] = new Ghosts(13, 9, root, Color.CYAN, this);
+        ghosts[3] = new Ghosts(14, 9, root, Color.ORANGE, this);
         ghosts[gFocus.index].getIv().setEffect(Ghosts.getGlow());
     }
     
@@ -148,6 +153,7 @@ public class Game {
      */
     private void onUpdate(Group root) throws FileNotFoundException {
         
+        checkStatus(root);
         
         ghosts[gFocus.index].moveGhost(ghosts[gFocus.index].getmGhost());
         int uhum = dots.eatDot(pacman.getLocX(), pacman.getLocY()
@@ -167,7 +173,7 @@ public class Game {
                     ghosts[i].randomGhost();
                     ghosts[i].moveGhost(ghosts[i].getRandomMoveGhost());
                 }
-                if (pacman.getLocX() == ghosts[i].getLocX() && pacman.getLocY() == ghosts[i].getLocY() && ghosts[i].getCheckV() != 0) {
+                if (pathFinder.checkColision(pacman, ghosts[i]) && ghosts[i].getCheckV() != 0) {
                     for (int j = 0; j < 4; j++) {
                         if(i != j && ghosts[j].getCheckV() == 1){
                             gFocus = gfVal[j];
@@ -189,22 +195,19 @@ public class Game {
                     ghosts[i].randomGhost();
                     ghosts[i].moveGhost(ghosts[i].getRandomMoveGhost());
                 }
-                if (pacman.getLocX() == ghosts[i].getLocX() && pacman.getLocY() == ghosts[i].getLocY() && ghosts[i].getCheckV() != 0) {
+                if (pathFinder.checkColision(pacman, ghosts[i]) && ghosts[i].getCheckV() != 0) {
                     won = true;
                 }
             }
         }
         
         if (isHollow && time + 10*1000 < System.currentTimeMillis()) {
-            System.out.println(time + " : "+ System.currentTimeMillis());
             time = 0;
             isHollow = false;
             for (int i = 0; i < 4; i++) {
                 ghosts[i].resetColor();
             }
         }
-        // System.out.println(map);
-        // System.out.println("");
         
         checkStatus(root);
     }
@@ -218,8 +221,8 @@ public class Game {
             String win = "YOU LOSE";
             
             HBox hBox = new HBox();
-            hBox.setTranslateX(400);
-            hBox.setTranslateY(300);
+            hBox.setTranslateX((map.getGRID_LENGTH() * map.getBLOCK_SIZE())/3);
+            hBox.setTranslateY((map.getGRID_HEIGHT()* map.getBLOCK_SIZE())/2.5);
             root.getChildren().add(hBox);
             
             for (int i = 0; i < win.toCharArray().length; i++) {
@@ -244,8 +247,8 @@ public class Game {
             String win = "YOU WIN";
             
             HBox hBox = new HBox();
-            hBox.setTranslateX(400);
-            hBox.setTranslateY(300);
+            hBox.setTranslateX((map.getGRID_LENGTH() * map.getBLOCK_SIZE())/3);
+            hBox.setTranslateY((map.getGRID_HEIGHT()* map.getBLOCK_SIZE())/2.5);
             root.getChildren().add(hBox);
             
             for (int j = 0; j < win.toCharArray().length; j++) {
@@ -272,8 +275,8 @@ public class Game {
             String win = "YOU LOSE";
             
             HBox hBox = new HBox();
-            hBox.setTranslateX(400);
-            hBox.setTranslateY(300);
+            hBox.setTranslateX((map.getGRID_LENGTH() * map.getBLOCK_SIZE())/3);
+            hBox.setTranslateY((map.getGRID_HEIGHT()* map.getBLOCK_SIZE())/2.5);
             root.getChildren().add(hBox);
             
             for (int j = 0; j < win.toCharArray().length; j++) {
@@ -307,23 +310,23 @@ public class Game {
         scene.setOnKeyPressed((KeyEvent event) -> {
             switch (event.getCode()) {
                 case UP:
-                    if (!ghosts[gFocus.index].checkColGhost(Pathfinder.Movement.UP)) {
-                        ghosts[gFocus.index].setmGhost(Pathfinder.Movement.UP);
+                    if (!ghosts[gFocus.index].checkColGhost(Movement.UP)) {
+                        ghosts[gFocus.index].setmGhost(Movement.UP);
                     }
                     break;
                 case RIGHT:
-                    if (!ghosts[gFocus.index].checkColGhost(Pathfinder.Movement.RIGHT)) {
-                        ghosts[gFocus.index].setmGhost(Pathfinder.Movement.RIGHT);
+                    if (!ghosts[gFocus.index].checkColGhost(Movement.RIGHT)) {
+                        ghosts[gFocus.index].setmGhost(Movement.RIGHT);
                     }
                     break;
                 case DOWN:
-                    if (!ghosts[gFocus.index].checkColGhost(Pathfinder.Movement.DOWN)) {
-                        ghosts[gFocus.index].setmGhost(Pathfinder.Movement.DOWN);
+                    if (!ghosts[gFocus.index].checkColGhost(Movement.DOWN)) {
+                        ghosts[gFocus.index].setmGhost(Movement.DOWN);
                     }
                     break;
                 case LEFT:
-                    if (!ghosts[gFocus.index].checkColGhost(Pathfinder.Movement.LEFT)) {
-                        ghosts[gFocus.index].setmGhost(Pathfinder.Movement.LEFT);
+                    if (!ghosts[gFocus.index].checkColGhost(Movement.LEFT)) {
+                        ghosts[gFocus.index].setmGhost(Movement.LEFT);
                     }
                     break;
                 case DIGIT1:
@@ -356,6 +359,22 @@ public class Game {
                     break;
             }
         });
+    }
+
+    public Pathfinder getPathFinder() {
+        return pathFinder;
+    }
+
+    public Pacman getPacman() {
+        return pacman;
+    }
+
+    public Ghosts[] getGhosts() {
+        return ghosts;
+    }
+
+    public Map getMap() {
+        return map;
     }
     
 }

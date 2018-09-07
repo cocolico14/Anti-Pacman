@@ -15,14 +15,13 @@ import javafx.scene.shape.Circle;
  */
 public class Dots {
 
-    private Circle[][] dotN = new Circle[Map.getGRID_LENGTH()][Map.getGRID_HEIGHT()];
+    private Circle[][] dotN;
     private int dotCounter = 210;
 
-    public Dots() {
+    public Dots(Game game) {
+        dotN = new Circle[game.getMap().getGRID_LENGTH()][game.getMap().getGRID_HEIGHT()];
     }
     
-    
-
     /**
      * This method is used to set dots on map
      *
@@ -33,9 +32,11 @@ public class Dots {
      */
     public void setDot(int x, int y, int mode, Group root) {
         if (mode == 0) {
-            this.dotN[x][y] = new Circle((x * Map.getBLOCK_SIZE()) + 15, (y * Map.getBLOCK_SIZE()) + 15, 2, Color.WHITE);
+            this.dotN[x][y] = new Circle((x * Map.getBLOCK_SIZE()) + 15
+                    , (y * Map.getBLOCK_SIZE()) + 15, 2, Color.WHITE);
         } else {
-            this.dotN[x][y] = new Circle((x * Map.getBLOCK_SIZE()) + 15, (y * Map.getBLOCK_SIZE()) + 15, 5, Color.DARKORANGE);
+            this.dotN[x][y] = new Circle((x * Map.getBLOCK_SIZE()) + 15
+                    , (y * Map.getBLOCK_SIZE()) + 15, 5, Color.DARKORANGE);
         }
         root.getChildren().add(this.dotN[x][y]);
     }
